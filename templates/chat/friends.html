@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Amis - BLIZZ{% endblock %}
+
+{% block content %}
+<div class="chat-container" style="max-width: 1000px; margin: 0 auto; padding: 20px;">
+  <h1 style="color:#764ba2;">Mes amis</h1>
+  <div style="background:#fff; border-radius:12px; padding:16px; margin-bottom:20px;">
+    {% if friends %}
+      <ul>
+        {% for friend in friends %}
+          <li style="margin:8px 0; display:flex; align-items:center; gap:10px;">
+            <a href="{% url 'private_chat' friend.id %}" class="btn-chat" style="padding:6px 12px; border-radius:8px; background:#667eea; color:#fff; text-decoration:none;">Discuter</a>
+            <span>@{{ friend.username }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>Aucun ami pour l'instant.</p>
+    {% endif %}
+  </div>
+
+  <h2 style="color:#764ba2;">Demandes reçues</h2>
+  <div style="background:#fff; border-radius:12px; padding:16px; margin-bottom:20px;">
+    {% if pending_received %}
+      {% for req in pending_received %}
+        <div style="display:flex; align-items:center; gap:10px; margin:8px 0;">
+          <span>@{{ req.from_user.username }}</span>
+          <a href="{% url 'accept_friend_request' req.id %}" class="btn-chat" style="padding:6px 12px; border-radius:8px; background:#2ecc71; color:#fff; text-decoration:none;">Accepter</a>
+          <a href="{% url 'decline_friend_request' req.id %}" class="btn-chat" style="padding:6px 12px; border-radius:8px; background:#e74c3c; color:#fff; text-decoration:none;">Refuser</a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>Aucune demande reçue.</p>
+    {% endif %}
+  </div>
+
+  <h2 style="color:#764ba2;">Demandes envoyées</h2>
+  <div style="background:#fff; border-radius:12px; padding:16px;">
+    {% if pending_sent %}
+      {% for req in pending_sent %}
+        <div style="display:flex; align-items:center; gap:10px; margin:8px 0;">
+          <span>@{{ req.to_user.username }}</span>
+          <a href="{% url 'cancel_friend_request' req.id %}" class="btn-chat" style="padding:6px 12px; border-radius:8px; background:#f1c40f; color:#000; text-decoration:none;">Annuler</a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>Aucune demande envoyée.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+

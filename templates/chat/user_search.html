@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rechercher des utilisateurs - BLIZZ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+
+    .search-header {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+    }
+
+    .search-header h1 {
+        color: #764ba2;
+        font-weight: 700;
+        margin: 0 0 20px 0;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .search-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .search-row {
+        display: flex;
+        gap: 15px;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .form-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-search {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: fit-content;
+    }
+
+    .btn-search:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-back {
+        background: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+        border: 2px solid #6c757d;
+        padding: 10px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        margin-bottom: 20px;
+    }
+
+    .btn-back:hover {
+        background: #6c757d;
+        color: white;
+        text-decoration: none;
+    }
+
+    .results-container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+    }
+
+    .user-item {
+        display: flex;
+        align-items: center;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .user-item:hover {
+        background: rgba(102, 126, 234, 0.1);
+        border-color: rgba(102, 126, 234, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .user-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        margin-right: 20px;
+        object-fit: cover;
+        border: 3px solid #667eea;
+    }
+
+    .user-avatar.default {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 24px;
+    }
+
+    .user-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .user-name {
+        font-weight: 700;
+        color: #333;
+        margin: 0 0 8px 0;
+        font-size: 18px;
+    }
+
+    .user-location {
+        color: #666;
+        font-size: 14px;
+        margin: 0 0 10px 0;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .user-games {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .game-badge {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .user-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .btn-chat-user {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s ease;
+        justify-content: center;
+    }
+
+    .btn-chat-user:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+
+    .empty-results {
+        text-align: center;
+        padding: 60px 20px;
+        color: #666;
+    }
+
+    .empty-results i {
+        font-size: 64px;
+        color: #ddd;
+        margin-bottom: 20px;
+    }
+
+    .game-icon {
+        font-size: 14px;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+
+    @media (max-width: 768px) {
+        .search-container {
+            padding: 10px;
+        }
+        
+        .search-row {
+            flex-direction: column;
+        }
+        
+        .form-group {
+            min-width: 100%;
+        }
+        
+        .user-item {
+            flex-direction: column;
+            text-align: center;
+            gap: 15px;
+        }
+        
+        .user-info {
+            order: 2;
+        }
+        
+        .user-actions {
+            order: 3;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-container">
+    <a href="{% url 'chat_home' %}" class="btn-back">
+        <i class="fas fa-arrow-left"></i>
+        Retour au chat
+    </a>
+
+    <div class="search-header">
+        <h1>
+            <i class="fas fa-search"></i>
+            Rechercher des utilisateurs
+        </h1>
+        
+        <form method="GET" class="search-form" id="searchForm">
+            <div class="search-row">
+                <div class="form-group">
+                    <label for="q">Nom d'utilisateur</label>
+                    <input type="text" 
+                           id="q" 
+                           name="q" 
+                           class="form-control" 
+                           placeholder="Rechercher par nom d'utilisateur..."
+                           value="{{ query }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="game">Filtrer par jeu favori</label>
+                    <select id="game" name="game" class="form-control">
+                        <option value="">Tous les jeux</option>
+                        {% for game_key, game_name in game_choices %}
+                            <option value="{{ game_key }}" {% if game_filter == game_key %}selected{% endif %}>
+                                {{ game_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-search">
+                    <i class="fas fa-search"></i>
+                    Rechercher
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="results-container">
+        <div id="searchResults">
+            {% if users %}
+                {% for user in users %}
+                    <div class="user-item">
+                        {% if user.avatar %}
+                            <img src="{{ user.avatar }}" alt="{{ user.username }}" class="user-avatar">
+                        {% else %}
+                            <div class="user-avatar default">
+                                {{ user.username|first|upper }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="user-info">
+                            <h3 class="user-name">{{ user.username }}</h3>
+                            {% if user.location %}
+                                <p class="user-location">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    {{ user.location }}
+                                </p>
+                            {% endif %}
+                            
+                            {% if user.favorite_games %}
+                                <div class="user-games">
+                                    {% for game in user.favorite_games %}
+                                        <span class="game-badge">
+                                            {% if game == 'freefire' %}
+                                                <i class="fas fa-fire game-icon"></i>
+                                            {% elif game == 'pubg' %}
+                                                <i class="fas fa-crosshairs game-icon"></i>
+                                            {% elif game == 'cod' %}
+                                                <i class="fas fa-skull-crossbones game-icon"></i>
+                                            {% elif game == 'fortnite' %}
+                                                <i class="fas fa-hammer game-icon"></i>
+                                            {% elif game == 'valorant' %}
+                                                <i class="fas fa-bullseye game-icon"></i>
+                                            {% elif game == 'apex' %}
+                                                <i class="fas fa-mountain game-icon"></i>
+                                            {% elif game == 'lol' %}
+                                                <i class="fas fa-chess game-icon"></i>
+                                            {% elif game == 'fifa' %}
+                                                <i class="fas fa-futbol game-icon"></i>
+                                            {% else %}
+                                                <i class="fas fa-gamepad game-icon"></i>
+                                            {% endif %}
+                                            {{ game }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="user-actions">
+                            <a href="{% url 'send_friend_request' user.id %}" class="btn-chat-user">
+                                <i class="fas fa-user-plus"></i>
+                                Demander en ami
+                            </a>
+                            <a href="{% url 'friend_requests' %}" class="btn-chat-user" style="background:#2ecc71;">
+                                <i class="fas fa-user-friends"></i>
+                                Mes demandes
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% elif query or game_filter %}
+                <div class="empty-results">
+                    <i class="fas fa-search"></i>
+                    <h3>Aucun utilisateur trouvé</h3>
+                    <p>Essayez de modifier vos critères de recherche.</p>
+                </div>
+            {% else %}
+                <div class="empty-results">
+                    <i class="fas fa-users"></i>
+                    <h3>Rechercher des utilisateurs</h3>
+                    <p>Utilisez les filtres ci-dessus pour trouver d'autres joueurs.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Recherche en temps réel avec AJAX
+    let searchTimeout;
+    
+    function performSearch() {
+        const form = document.getElementById('searchForm');
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        
+        // Afficher un indicateur de chargement
+        document.getElementById('searchResults').innerHTML = `
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Recherche en cours...</p>
+            </div>
+        `;
+        
+        fetch(`{% url 'user_search' %}?${params.toString()}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            updateSearchResults(data.users);
+        })
+        .catch(error => {
+            console.error('Erreur lors de la recherche:', error);
+            document.getElementById('searchResults').innerHTML = `
+                <div class="empty-results">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Erreur de recherche</h3>
+                    <p>Une erreur s'est produite. Veuillez réessayer.</p>
+                </div>
+            `;
+        });
+    }
+    
+    function updateSearchResults(users) {
+        const resultsContainer = document.getElementById('searchResults');
+        
+        if (users.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="empty-results">
+                    <i class="fas fa-search"></i>
+                    <h3>Aucun utilisateur trouvé</h3>
+                    <p>Essayez de modifier vos critères de recherche.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        users.forEach(user => {
+            const avatar = user.avatar ? 
+                `<img src="${user.avatar}" alt="${user.username}" class="user-avatar">` :
+                `<div class="user-avatar default">${user.username.charAt(0).toUpperCase()}</div>`;
+            
+            const location = user.location ? 
+                `<p class="user-location"><i class="fas fa-map-marker-alt"></i> ${user.location}</p>` : '';
+            
+            let gamesHtml = '';
+            if (user.favorite_games && user.favorite_games.length > 0) {
+                gamesHtml = '<div class="user-games">';
+                user.favorite_games.forEach(game => {
+                    const gameIcon = getGameIcon(game);
+                    gamesHtml += `<span class="game-badge">${gameIcon} ${game}</span>`;
+                });
+                gamesHtml += '</div>';
+            }
+            
+            html += `
+                <div class="user-item">
+                    ${avatar}
+                    <div class="user-info">
+                        <h3 class="user-name">${user.username}</h3>
+                        ${location}
+                        ${gamesHtml}
+                    </div>
+                    <div class="user-actions">
+                        <a href="/friends/request/${user.id}/" class="btn-chat-user">
+                            <i class="fas fa-user-plus"></i>
+                            Demander en ami
+                        </a>
+                    </div>
+                </div>
+            `;
+        });
+        
+        resultsContainer.innerHTML = html;
+    }
+    
+    function getGameIcon(game) {
+        const icons = {
+            'freefire': '<i class="fas fa-fire game-icon"></i>',
+            'pubg': '<i class="fas fa-crosshairs game-icon"></i>',
+            'cod': '<i class="fas fa-skull-crossbones game-icon"></i>',
+            'fortnite': '<i class="fas fa-hammer game-icon"></i>',
+            'valorant': '<i class="fas fa-bullseye game-icon"></i>',
+            'apex': '<i class="fas fa-mountain game-icon"></i>',
+            'lol': '<i class="fas fa-chess game-icon"></i>',
+            'fifa': '<i class="fas fa-futbol game-icon"></i>'
+        };
+        return icons[game] || '<i class="fas fa-gamepad game-icon"></i>';
+    }
+    
+    // Recherche automatique lors de la saisie
+    document.getElementById('q').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(performSearch, 500);
+    });
+    
+    // Recherche automatique lors du changement de filtre
+    document.getElementById('game').addEventListener('change', performSearch);
+    
+    // Empêcher la soumission normale du formulaire
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        performSearch();
+    });
+</script>
+{% endblock %}
