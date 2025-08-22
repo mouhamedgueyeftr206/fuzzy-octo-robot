@@ -1,0 +1,389 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Highlights - BLIZZ{% endblock %}
+
+{% block content %}
+<style>
+    .highlights-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+        min-height: 100vh;
+    }
+
+    .highlights-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .highlights-title {
+        font-family: 'Halo', sans-serif;
+        font-size: 3rem;
+        color: var(--primary-color);
+        text-shadow: 0 0 20px var(--primary-color);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    .highlights-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+    }
+
+    .navigation-tabs {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 3rem;
+        flex-wrap: wrap;
+    }
+
+    .nav-tab {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 25px;
+        text-decoration: none;
+        font-family: 'RussoOne', sans-serif;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .nav-tab::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transition: left 0.5s;
+    }
+
+    .nav-tab:hover::before {
+        left: 100%;
+    }
+
+    .nav-tab:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 30px var(--primary-color), 0 0 50px var(--secondary-color);
+        color: white;
+        text-decoration: none;
+    }
+
+    .nav-tab.active {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        box-shadow: 0 0 20px var(--primary-color);
+    }
+
+    .user-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 20px var(--primary-color);
+    }
+
+    .stat-number {
+        font-family: 'RussoOne', sans-serif;
+        font-size: 2rem;
+        color: var(--secondary-color);
+        text-shadow: 0 0 10px var(--secondary-color);
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: white;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .recent-highlights {
+        margin-bottom: 3rem;
+    }
+
+    .section-title {
+        font-family: 'RussoOne', sans-serif;
+        color: white;
+        font-size: 1.8rem;
+        margin-bottom: 2rem;
+        text-align: center;
+        text-shadow: 0 0 10px var(--primary-color);
+    }
+
+    .highlights-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .highlight-preview-card {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        border-radius: 15px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        position: relative;
+        aspect-ratio: 9/16;
+    }
+
+    .highlight-preview-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 20px var(--primary-color);
+    }
+
+    .highlight-video-preview {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        cursor: pointer;
+    }
+
+    .highlight-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+        padding: 1rem;
+        color: white;
+    }
+
+    .highlight-author {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .highlight-author img {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        border: 1px solid var(--primary-color);
+    }
+
+    .highlight-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .cta-section {
+        text-align: center;
+        margin-top: 4rem;
+    }
+
+    .cta-button {
+        background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+        color: white;
+        border: none;
+        padding: 1.5rem 3rem;
+        border-radius: 50px;
+        font-family: 'RussoOne', sans-serif;
+        font-size: 1.3rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .cta-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 30px #ff6b6b;
+        color: white;
+        text-decoration: none;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--primary-color);
+        margin-bottom: 2rem;
+        opacity: 0.7;
+    }
+
+    @media (max-width: 768px) {
+        .highlights-container {
+            padding: 1rem;
+        }
+        
+        .highlights-title {
+            font-size: 2rem;
+        }
+        
+        .navigation-tabs {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .nav-tab {
+            width: 100%;
+            max-width: 300px;
+            justify-content: center;
+        }
+        
+        .user-stats {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="highlights-container">
+    <div class="highlights-header">
+        <h1 class="highlights-title">
+            <i class="fas fa-video"></i>
+            HIGHLIGHTS
+        </h1>
+        <p class="highlights-subtitle">
+            Partagez vos moments gaming en vidéo • Durée: 30s • Expire après 48h
+        </p>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="navigation-tabs">
+        <a href="{% url 'highlights_for_you' %}" class="nav-tab">
+            <i class="fas fa-fire"></i>
+            Pour Toi
+        </a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'highlights_friends' %}" class="nav-tab">
+            <i class="fas fa-users"></i>
+            Amis
+        </a>
+        <a href="{% url 'create_highlight' %}" class="nav-tab">
+            <i class="fas fa-plus"></i>
+            Créer
+        </a>
+        {% endif %}
+        <a href="{% url 'highlights_search' %}" class="nav-tab">
+            <i class="fas fa-search"></i>
+            Recherche
+        </a>
+    </div>
+
+    <!-- User Stats (si connecté) -->
+    {% if user.is_authenticated and user_stats %}
+    <div class="user-stats">
+        <div class="stat-card">
+            <span class="stat-number">{{ user_stats.highlights_count }}</span>
+            <span class="stat-label">Mes Highlights</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ user_stats.subscribers_count }}</span>
+            <span class="stat-label">Abonnés</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ user_stats.subscriptions_count }}</span>
+            <span class="stat-label">Abonnements</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Highlights Preview -->
+    {% if recent_highlights %}
+    <div class="recent-highlights">
+        <h2 class="section-title">✨ Highlights Récents</h2>
+        <div class="highlights-preview-grid">
+            {% for highlight in recent_highlights %}
+            <div class="highlight-preview-card">
+                <video class="highlight-video-preview" 
+                       onclick="window.location.href='{% url 'highlight_detail' highlight.id %}'"
+                       muted>
+                    <source src="{{ highlight.video.url }}" type="video/mp4">
+                </video>
+                <div class="highlight-overlay">
+                    <div class="highlight-author">
+                        {% if highlight.author.profile.profileimg %}
+                        <img src="{{ highlight.author.profile.profileimg.url }}" alt="{{ highlight.author.username }}">
+                        {% endif %}
+                        @{{ highlight.author.username }}
+                    </div>
+                    <div class="highlight-stats">
+                        <span><i class="fas fa-heart"></i> {{ highlight.likes_count }}</span>
+                        <span><i class="fas fa-comment"></i> {{ highlight.comments_count }}</span>
+                        <span><i class="fas fa-eye"></i> {{ highlight.views.count }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-video"></i>
+        <h3>Aucun Highlight pour le moment</h3>
+        <p>Soyez le premier à partager un moment gaming !</p>
+    </div>
+    {% endif %}
+
+    <!-- Call to Action -->
+    <div class="cta-section">
+        {% if user.is_authenticated %}
+        <a href="{% url 'create_highlight' %}" class="cta-button">
+            <i class="fas fa-video"></i>
+            Créer mon premier Highlight
+        </a>
+        {% else %}
+        <a href="#" class="cta-button">
+            <i class="fas fa-sign-in-alt"></i>
+            Connectez-vous pour créer
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Prévisualisation vidéo au survol
+document.addEventListener('DOMContentLoaded', function() {
+    const videoElements = document.querySelectorAll('.highlight-video-preview');
+    
+    videoElements.forEach(video => {
+        video.addEventListener('mouseenter', function() {
+            this.play();
+        });
+        
+        video.addEventListener('mouseleave', function() {
+            this.pause();
+            this.currentTime = 0;
+        });
+    });
+});
+</script>
+{% endblock %}

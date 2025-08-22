@@ -3,7 +3,8 @@ from django.contrib import admin
 from blizzgame.models import (
     Post, PostImage, PostVideo, Profile, Product, ProductCategory, 
     ProductImage, ProductVariant, Order, OrderItem, Cart, CartItem,
-    ShopCinetPayTransaction, ShopifyIntegration, UserReputation
+    ShopCinetPayTransaction, ShopifyIntegration, UserReputation,
+    Highlight, HighlightLike, HighlightComment, HighlightView, HighlightShare, UserSubscription
 )
 
 # Modèles existants
@@ -12,6 +13,66 @@ admin.site.register(Post)
 admin.site.register(PostImage)
 admin.site.register(PostVideo)
 admin.site.register(UserReputation)
+
+# === ADMINISTRATION HIGHLIGHTS ===
+
+@admin.register(Highlight)
+class HighlightAdmin(admin.ModelAdmin):
+    list_display = ['author', 'caption_preview', 'hashtags_display', 'likes_count', 'comments_count', 'views_count', 'created_at', 'expires_at', 'is_active']
+    list_filter = ['is_active', 'created_at', 'expires_at']
+    search_fields = ['author__username', 'caption', 'hashtags']
+    readonly_fields = ['created_at', 'expires_at', 'views_count']
+    list_editable = ['is_active']
+    
+    def caption_preview(self, obj):
+        return obj.caption[:50] + '...' if len(obj.caption) > 50 else obj.caption
+    caption_preview.short_description = 'Caption'
+    
+    def hashtags_display(self, obj):
+        return ', '.join([f'#{tag}' for tag in obj.hashtags]) if obj.hashtags else 'Aucun'
+    hashtags_display.short_description = 'Hashtags'
+    
+    def likes_count(self, obj):
+        return obj.likes.count()
+    likes_count.short_description = 'Likes'
+    
+    def comments_count(self, obj):
+        return obj.comments.count()
+    comments_count.short_description = 'Commentaires'
+    
+    def views_count(self, obj):
+        return obj.views.count()
+    views_count.short_description = 'Vues'
+
+@admin.register(HighlightLike)
+class HighlightLikeAdmin(admin.ModelAdmin):
+    list_display = ['user', 'highlight_preview', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'highlight__caption']
+    
+    def highlight_preview(self, obj):
+        return f"{obj.highlight.author.username} - {obj.highlight.caption[:30]}..."
+    highlight_preview.short_description = 'Highlight'
+
+@admin.register(HighlightComment)
+class HighlightCommentAdmin(admin.ModelAdmin):
+    list_display = ['user', 'highlight_preview', 'content_preview', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'content', 'highlight__caption']
+    
+    def highlight_preview(self, obj):
+        return f"{obj.highlight.author.username} - {obj.highlight.caption[:20]}..."
+    highlight_preview.short_description = 'Highlight'
+    
+    def content_preview(self, obj):
+        return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
+    content_preview.short_description = 'Commentaire'
+
+@admin.register(UserSubscription)
+class UserSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['subscriber', 'subscribed_to', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['subscriber__username', 'subscribed_to__username']
 
 # === ADMINISTRATION BOUTIQUE E-COMMERCE ===
 

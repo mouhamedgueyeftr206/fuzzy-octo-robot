@@ -1,0 +1,595 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Highlights BLIZZ{% endblock %}
+
+{% block content %}
+<style>
+    .feed-container {
+        max-width: 500px;
+        margin: 0 auto;
+        padding: 1rem;
+        background: var(--dark-blue);
+        min-height: 100vh;
+    }
+
+    .feed-header {
+        position: sticky;
+        top: 0;
+        background: linear-gradient(180deg, var(--dark-blue) 0%, rgba(15, 23, 41, 0.95) 100%);
+        padding: 1rem 0;
+        margin-bottom: 1rem;
+        z-index: 100;
+        border-bottom: 1px solid var(--primary-color);
+    }
+
+    .feed-title {
+        font-family: 'RussoOne', sans-serif;
+        color: var(--primary-color);
+        text-align: center;
+        margin: 0;
+        font-size: 1.5rem;
+        text-shadow: 0 0 10px var(--primary-color);
+    }
+
+    .feed-tabs {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .feed-tab {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+    .feed-tab.active {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .feed-tab:hover {
+        background: var(--primary-color);
+        color: white;
+        text-decoration: none;
+    }
+
+    .highlights-feed {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .highlight-card {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        border-radius: 20px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .highlight-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    .author-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid var(--primary-color);
+        object-fit: cover;
+    }
+
+    .author-info {
+        flex: 1;
+    }
+
+    .author-name {
+        color: white;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .highlight-time {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.8rem;
+    }
+
+    .subscribe-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .subscribe-btn:hover {
+        background: var(--secondary-color);
+        transform: scale(1.05);
+    }
+
+    .subscribe-btn.subscribed {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
+    .highlight-video-container {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 9/16;
+        background: #000;
+    }
+
+    .highlight-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        cursor: pointer;
+    }
+
+    .video-controls {
+        position: absolute;
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 0.5rem;
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
+    }
+
+    .time-remaining {
+        color: #ff6b6b;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .video-progress {
+        flex: 1;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        margin: 0 1rem;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: var(--primary-color);
+        width: 0%;
+        transition: width 0.1s;
+    }
+
+    .highlight-content {
+        padding: 1rem;
+    }
+
+    .highlight-caption {
+        color: white;
+        margin-bottom: 1rem;
+        line-height: 1.4;
+    }
+
+    .hashtags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .hashtag {
+        background: rgba(108, 92, 231, 0.2);
+        color: var(--primary-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .hashtag:hover {
+        background: var(--primary-color);
+        color: white;
+        text-decoration: none;
+    }
+
+    .highlight-actions {
+        display: flex;
+        justify-content: space-around;
+        padding: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        padding: 0.5rem;
+        border-radius: 10px;
+    }
+
+    .action-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.1);
+    }
+
+    .action-btn.liked {
+        color: #ff6b6b;
+    }
+
+    .action-btn i {
+        font-size: 1.2rem;
+    }
+
+    .action-btn span {
+        font-size: 0.8rem;
+    }
+
+    .load-more {
+        text-align: center;
+        margin: 2rem 0;
+    }
+
+    .load-more-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: 'RussoOne', sans-serif;
+    }
+
+    .load-more-btn:hover {
+        background: var(--secondary-color);
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        .feed-container {
+            padding: 0.5rem;
+        }
+        
+        .highlight-card {
+            border-radius: 15px;
+        }
+    }
+</style>
+
+<div class="feed-container">
+    <div class="feed-header">
+        <h1 class="feed-title">{{ page_title }}</h1>
+        <div class="feed-tabs">
+            <a href="{% url 'highlights_for_you' %}" class="feed-tab {% if page_title == 'Pour Toi' %}active{% endif %}">
+                <i class="fas fa-fire"></i> Pour Toi
+            </a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'highlights_friends' %}" class="feed-tab {% if page_title == 'Amis' %}active{% endif %}">
+                <i class="fas fa-users"></i> Amis
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="highlights-feed" id="highlightsFeed">
+        {% for highlight in highlights %}
+        <div class="highlight-card" data-highlight-id="{{ highlight.id }}">
+            <!-- Header avec auteur -->
+            <div class="highlight-header">
+                {% if highlight.author.profile.profileimg %}
+                <img src="{{ highlight.author.profile.profileimg.url }}" alt="{{ highlight.author.username }}" class="author-avatar">
+                {% else %}
+                <div class="author-avatar" style="background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                    {{ highlight.author.username|first|upper }}
+                </div>
+                {% endif %}
+                
+                <div class="author-info">
+                    <div class="author-name">@{{ highlight.author.username }}</div>
+                    <div class="highlight-time">{{ highlight.created_at|timesince }}</div>
+                </div>
+                
+                {% if user.is_authenticated and user != highlight.author %}
+                <button class="subscribe-btn" data-user-id="{{ highlight.author.id }}">
+                    S'abonner
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Vidéo -->
+            <div class="highlight-video-container">
+                <video class="highlight-video" 
+                       controls 
+                       preload="metadata"
+                       onclick="recordView('{{ highlight.id }}')">
+                    <source src="{{ highlight.video.url }}" type="video/mp4">
+                    Votre navigateur ne supporte pas la lecture de vidéos.
+                </video>
+                
+                <div class="video-controls">
+                    {% if highlight.time_remaining %}
+                    <span class="time-remaining">
+                        <i class="fas fa-clock"></i>
+                        {{ highlight.time_remaining|timeuntil }}
+                    </span>
+                    {% endif %}
+                    <div class="video-progress">
+                        <div class="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu -->
+            <div class="highlight-content">
+                {% if highlight.caption %}
+                <div class="highlight-caption">{{ highlight.caption }}</div>
+                {% endif %}
+                
+                {% if highlight.hashtags %}
+                <div class="hashtags">
+                    {% for hashtag in highlight.hashtags %}
+                    <a href="{% url 'highlights_hashtag' hashtag %}" class="hashtag">#{{ hashtag }}</a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Actions -->
+            <div class="highlight-actions">
+                <button class="action-btn like-btn" data-highlight-id="{{ highlight.id }}">
+                    <i class="fas fa-heart"></i>
+                    <span>{{ highlight.likes_count }}</span>
+                </button>
+                
+                <button class="action-btn comment-btn" onclick="showComments('{{ highlight.id }}')">
+                    <i class="fas fa-comment"></i>
+                    <span>{{ highlight.comments_count }}</span>
+                </button>
+                
+                <button class="action-btn share-btn" onclick="shareHighlight('{{ highlight.id }}')">
+                    <i class="fas fa-share"></i>
+                    <span>Partager</span>
+                </button>
+                
+                <a href="{% url 'highlight_detail' highlight.id %}" class="action-btn">
+                    <i class="fas fa-eye"></i>
+                    <span>{{ highlight.views.count }}</span>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if highlights.has_next %}
+    <div class="load-more">
+        <button class="load-more-btn" onclick="loadMoreHighlights()">
+            <i class="fas fa-plus"></i>
+            Charger plus
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+let currentPage = {{ highlights.number }};
+let hasNext = {{ highlights.has_next|yesno:"true,false" }};
+
+// Enregistrer une vue
+function recordView(highlightId) {
+    fetch(`/highlights/${highlightId}/view/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    });
+}
+
+// Toggle like
+document.addEventListener('DOMContentLoaded', function() {
+    const likeButtons = document.querySelectorAll('.like-btn');
+    
+    likeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const highlightId = this.dataset.highlightId;
+            
+            fetch(`/highlights/${highlightId}/like/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.classList.toggle('liked', data.liked);
+                    this.querySelector('span').textContent = data.likes_count;
+                    
+                    if (data.liked) {
+                        this.style.animation = 'heartBeat 0.6s ease-in-out';
+                        setTimeout(() => this.style.animation = '', 600);
+                    }
+                }
+            });
+        });
+    });
+});
+
+// Toggle subscription
+document.addEventListener('DOMContentLoaded', function() {
+    const subscribeButtons = document.querySelectorAll('.subscribe-btn');
+    
+    subscribeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            
+            fetch(`/subscribe/${userId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.textContent = data.subscribed ? 'Abonné' : 'S\'abonner';
+                    this.classList.toggle('subscribed', data.subscribed);
+                }
+            });
+        });
+    });
+});
+
+// Charger plus de highlights
+function loadMoreHighlights() {
+    if (!hasNext) return;
+    
+    const loadBtn = document.querySelector('.load-more-btn');
+    loadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Chargement...';
+    loadBtn.disabled = true;
+    
+    fetch(`/api/highlights/feed/?page=${currentPage + 1}&type={{ page_title|lower }}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Ajouter les nouveaux highlights
+            data.highlights.forEach(highlight => {
+                const highlightElement = createHighlightElement(highlight);
+                document.getElementById('highlightsFeed').appendChild(highlightElement);
+            });
+            
+            currentPage++;
+            hasNext = data.has_next;
+            
+            if (!hasNext) {
+                document.querySelector('.load-more').style.display = 'none';
+            }
+        }
+    })
+    .finally(() => {
+        loadBtn.innerHTML = '<i class="fas fa-plus"></i> Charger plus';
+        loadBtn.disabled = false;
+    });
+}
+
+// Créer un élément highlight dynamiquement
+function createHighlightElement(highlight) {
+    const div = document.createElement('div');
+    div.className = 'highlight-card';
+    div.dataset.highlightId = highlight.id;
+    
+    div.innerHTML = `
+        <div class="highlight-header">
+            ${highlight.author.avatar ? 
+                `<img src="${highlight.author.avatar}" alt="${highlight.author.username}" class="author-avatar">` :
+                `<div class="author-avatar" style="background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">${highlight.author.username.charAt(0).toUpperCase()}</div>`
+            }
+            <div class="author-info">
+                <div class="author-name">@${highlight.author.username}</div>
+                <div class="highlight-time">${highlight.created_at}</div>
+            </div>
+        </div>
+        
+        <div class="highlight-video-container">
+            <video class="highlight-video" controls preload="metadata" onclick="recordView('${highlight.id}')">
+                <source src="${highlight.video_url}" type="video/mp4">
+            </video>
+            ${highlight.time_remaining ? `
+                <div class="video-controls">
+                    <span class="time-remaining">
+                        <i class="fas fa-clock"></i>
+                        ${highlight.time_remaining}
+                    </span>
+                    <div class="video-progress"><div class="progress-bar"></div></div>
+                </div>
+            ` : ''}
+        </div>
+        
+        ${highlight.caption ? `<div class="highlight-content"><div class="highlight-caption">${highlight.caption}</div></div>` : ''}
+        
+        <div class="highlight-actions">
+            <button class="action-btn like-btn ${highlight.user_liked ? 'liked' : ''}" data-highlight-id="${highlight.id}">
+                <i class="fas fa-heart"></i>
+                <span>${highlight.likes_count}</span>
+            </button>
+            <button class="action-btn comment-btn" onclick="showComments('${highlight.id}')">
+                <i class="fas fa-comment"></i>
+                <span>${highlight.comments_count}</span>
+            </button>
+            <button class="action-btn share-btn" onclick="shareHighlight('${highlight.id}')">
+                <i class="fas fa-share"></i>
+                <span>Partager</span>
+            </button>
+            <a href="/highlights/${highlight.id}/" class="action-btn">
+                <i class="fas fa-eye"></i>
+                <span>${highlight.views_count}</span>
+            </a>
+        </div>
+    `;
+    
+    return div;
+}
+
+// Afficher les commentaires
+function showComments(highlightId) {
+    window.location.href = `/highlights/${highlightId}/`;
+}
+
+// Partager un highlight
+function shareHighlight(highlightId) {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Highlight BLIZZ',
+            url: window.location.origin + `/highlights/${highlightId}/`
+        });
+    } else {
+        // Fallback: copier le lien
+        const url = window.location.origin + `/highlights/${highlightId}/`;
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Lien copié dans le presse-papiers!');
+        });
+    }
+}
+
+// Animation CSS pour le like
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes heartBeat {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.2); }
+        50% { transform: scale(1); }
+        75% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

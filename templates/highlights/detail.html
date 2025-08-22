@@ -1,0 +1,682 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Highlight de {{ highlight.author.username }} - BLIZZ{% endblock %}
+
+{% block content %}
+<style>
+    .detail-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem;
+        background: var(--dark-blue);
+        min-height: 100vh;
+    }
+
+    .highlight-detail-card {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .highlight-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .author-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 2px solid var(--primary-color);
+        object-fit: cover;
+    }
+
+    .author-info {
+        flex: 1;
+    }
+
+    .author-name {
+        color: white;
+        font-weight: 600;
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .highlight-meta {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+
+    .highlight-actions-header {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .action-btn-header {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.8rem;
+    }
+
+    .action-btn-header:hover {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .highlight-video-section {
+        position: relative;
+        background: #000;
+    }
+
+    .highlight-video {
+        width: 100%;
+        max-height: 70vh;
+        object-fit: contain;
+    }
+
+    .video-overlay {
+        position: absolute;
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 1rem;
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
+    }
+
+    .time-remaining {
+        color: #ff6b6b;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .highlight-content {
+        padding: 1.5rem;
+    }
+
+    .highlight-caption {
+        color: white;
+        margin-bottom: 1rem;
+        line-height: 1.5;
+        font-size: 1rem;
+    }
+
+    .hashtags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .hashtag {
+        background: rgba(108, 92, 231, 0.2);
+        color: var(--primary-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .hashtag:hover {
+        background: var(--primary-color);
+        color: white;
+        text-decoration: none;
+    }
+
+    .highlight-stats {
+        display: flex;
+        justify-content: space-around;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        color: white;
+    }
+
+    .stat-number {
+        font-family: 'RussoOne', sans-serif;
+        font-size: 1.2rem;
+        color: var(--secondary-color);
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+
+    .highlight-actions {
+        display: flex;
+        justify-content: space-around;
+        padding: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        padding: 0.75rem;
+        border-radius: 10px;
+        min-width: 60px;
+    }
+
+    .action-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.1);
+    }
+
+    .action-btn.liked {
+        color: #ff6b6b;
+    }
+
+    .action-btn i {
+        font-size: 1.5rem;
+    }
+
+    .action-btn span {
+        font-size: 0.8rem;
+    }
+
+    .comments-section {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        border-radius: 20px;
+        overflow: hidden;
+    }
+
+    .comments-header {
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .comments-title {
+        color: white;
+        margin: 0;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .comments-list {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 1rem;
+    }
+
+    .comment-item {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .comment-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .comment-avatar {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        border: 1px solid var(--primary-color);
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .comment-content {
+        flex: 1;
+    }
+
+    .comment-author {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .comment-text {
+        color: white;
+        margin-bottom: 0.25rem;
+        line-height: 1.4;
+    }
+
+    .comment-time {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.8rem;
+    }
+
+    .comment-form {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .comment-input {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--primary-color);
+        border-radius: 20px;
+        padding: 0.75rem 1rem;
+        color: white;
+        resize: none;
+        font-family: inherit;
+    }
+
+    .comment-input:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 10px rgba(162, 155, 254, 0.3);
+    }
+
+    .comment-submit {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .comment-submit:hover {
+        background: var(--secondary-color);
+        transform: scale(1.1);
+    }
+
+    .back-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 20px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .back-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        .detail-container {
+            padding: 0.5rem;
+        }
+        
+        .highlight-actions {
+            padding: 0.75rem;
+        }
+        
+        .action-btn {
+            padding: 0.5rem;
+            min-width: 50px;
+        }
+        
+        .action-btn i {
+            font-size: 1.2rem;
+        }
+    }
+</style>
+
+<div class="detail-container">
+    <a href="{% url 'highlights_for_you' %}" class="back-btn">
+        <i class="fas fa-arrow-left"></i>
+        Retour au feed
+    </a>
+
+    <div class="highlight-detail-card">
+        <!-- Header -->
+        <div class="highlight-header">
+            {% if highlight.author.profile.profileimg %}
+            <img src="{{ highlight.author.profile.profileimg.url }}" alt="{{ highlight.author.username }}" class="author-avatar">
+            {% else %}
+            <div class="author-avatar" style="background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                {{ highlight.author.username|first|upper }}
+            </div>
+            {% endif %}
+            
+            <div class="author-info">
+                <div class="author-name">@{{ highlight.author.username }}</div>
+                <div class="highlight-meta">
+                    {{ highlight.created_at|timesince }} • 
+                    {% if highlight.time_remaining %}
+                        Expire dans {{ highlight.time_remaining|timeuntil }}
+                    {% else %}
+                        Expiré
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="highlight-actions-header">
+                {% if user.is_authenticated and user != highlight.author %}
+                <button class="action-btn-header subscribe-btn" data-user-id="{{ highlight.author.id }}">
+                    S'abonner
+                </button>
+                {% endif %}
+                
+                {% if user == highlight.author %}
+                <a href="{% url 'delete_highlight' highlight.id %}" class="action-btn-header" 
+                   onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce Highlight ?')">
+                    <i class="fas fa-trash"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Vidéo -->
+        <div class="highlight-video-section">
+            <video class="highlight-video" controls autoplay muted>
+                <source src="{{ highlight.video.url }}" type="video/mp4">
+                Votre navigateur ne supporte pas la lecture de vidéos.
+            </video>
+            
+            {% if highlight.time_remaining %}
+            <div class="video-overlay">
+                <div class="time-remaining">
+                    <i class="fas fa-clock"></i>
+                    Expire dans {{ highlight.time_remaining|timeuntil }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Contenu -->
+        {% if highlight.caption or highlight.hashtags %}
+        <div class="highlight-content">
+            {% if highlight.caption %}
+            <div class="highlight-caption">{{ highlight.caption }}</div>
+            {% endif %}
+            
+            {% if highlight.hashtags %}
+            <div class="hashtags">
+                {% for hashtag in highlight.hashtags %}
+                <a href="{% url 'highlights_hashtag' hashtag %}" class="hashtag">#{{ hashtag }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Statistiques -->
+        <div class="highlight-stats">
+            <div class="stat-item">
+                <span class="stat-number">{{ highlight.likes_count }}</span>
+                <span class="stat-label">Likes</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ highlight.comments_count }}</span>
+                <span class="stat-label">Commentaires</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">{{ highlight.views.count }}</span>
+                <span class="stat-label">Vues</span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="highlight-actions">
+            {% if user.is_authenticated %}
+            <button class="action-btn like-btn {% if user_liked %}liked{% endif %}" data-highlight-id="{{ highlight.id }}">
+                <i class="fas fa-heart"></i>
+                <span>Like</span>
+            </button>
+            {% endif %}
+            
+            <button class="action-btn comment-btn" onclick="focusCommentInput()">
+                <i class="fas fa-comment"></i>
+                <span>Commenter</span>
+            </button>
+            
+            <button class="action-btn share-btn" onclick="shareHighlight()">
+                <i class="fas fa-share"></i>
+                <span>Partager</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Section Commentaires -->
+    <div class="comments-section">
+        <div class="comments-header">
+            <h3 class="comments-title">
+                <i class="fas fa-comments"></i>
+                Commentaires ({{ comments.count }})
+            </h3>
+        </div>
+
+        {% if user.is_authenticated %}
+        <form class="comment-form" id="commentForm">
+            {% csrf_token %}
+            <textarea name="content" class="comment-input" 
+                      placeholder="Ajouter un commentaire..." 
+                      maxlength="300" 
+                      rows="1" 
+                      id="commentInput"></textarea>
+            <button type="submit" class="comment-submit">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+        {% endif %}
+
+        <div class="comments-list" id="commentsList">
+            {% for comment in comments %}
+            <div class="comment-item">
+                {% if comment.user.profile.profileimg %}
+                <img src="{{ comment.user.profile.profileimg.url }}" alt="{{ comment.user.username }}" class="comment-avatar">
+                {% else %}
+                <div class="comment-avatar" style="background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8rem;">
+                    {{ comment.user.username|first|upper }}
+                </div>
+                {% endif %}
+                
+                <div class="comment-content">
+                    <div class="comment-author">@{{ comment.user.username }}</div>
+                    <div class="comment-text">{{ comment.content }}</div>
+                    <div class="comment-time">{{ comment.created_at|timesince }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; padding: 2rem; color: rgba(255, 255, 255, 0.5);">
+                <i class="fas fa-comment-slash" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p>Aucun commentaire pour le moment</p>
+                <p>Soyez le premier à commenter !</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle like
+document.addEventListener('DOMContentLoaded', function() {
+    const likeBtn = document.querySelector('.like-btn');
+    
+    if (likeBtn) {
+        likeBtn.addEventListener('click', function() {
+            const highlightId = this.dataset.highlightId;
+            
+            fetch(`/highlights/${highlightId}/like/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.classList.toggle('liked', data.liked);
+                    
+                    // Mettre à jour le compteur dans les stats
+                    const statNumber = document.querySelector('.stat-item .stat-number');
+                    if (statNumber && statNumber.parentElement.querySelector('.stat-label').textContent === 'Likes') {
+                        statNumber.textContent = data.likes_count;
+                    }
+                    
+                    if (data.liked) {
+                        this.style.animation = 'heartBeat 0.6s ease-in-out';
+                        setTimeout(() => this.style.animation = '', 600);
+                    }
+                }
+            });
+        });
+    }
+});
+
+// Ajouter un commentaire
+document.getElementById('commentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('.comment-submit');
+    const input = this.querySelector('.comment-input');
+    
+    if (!input.value.trim()) return;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    fetch(`/highlights/{{ highlight.id }}/comment/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Ajouter le nouveau commentaire
+            const commentsList = document.getElementById('commentsList');
+            const newComment = createCommentElement(data.comment);
+            
+            // Si c'est le premier commentaire, supprimer le message "aucun commentaire"
+            const noComments = commentsList.querySelector('div[style*="text-align: center"]');
+            if (noComments) {
+                noComments.remove();
+            }
+            
+            commentsList.insertBefore(newComment, commentsList.firstChild);
+            
+            // Mettre à jour le compteur
+            const commentsTitle = document.querySelector('.comments-title');
+            commentsTitle.innerHTML = `<i class="fas fa-comments"></i> Commentaires (${data.comments_count})`;
+            
+            // Vider le formulaire
+            input.value = '';
+            input.style.height = 'auto';
+        } else {
+            alert('Erreur: ' + data.error);
+        }
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+    });
+});
+
+// Créer un élément commentaire
+function createCommentElement(comment) {
+    const div = document.createElement('div');
+    div.className = 'comment-item';
+    
+    div.innerHTML = `
+        ${comment.user_avatar ? 
+            `<img src="${comment.user_avatar}" alt="${comment.user}" class="comment-avatar">` :
+            `<div class="comment-avatar" style="background: var(--primary-color); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8rem;">${comment.user.charAt(0).toUpperCase()}</div>`
+        }
+        <div class="comment-content">
+            <div class="comment-author">@${comment.user}</div>
+            <div class="comment-text">${comment.content}</div>
+            <div class="comment-time">${comment.created_at}</div>
+        </div>
+    `;
+    
+    return div;
+}
+
+// Auto-resize textarea
+document.getElementById('commentInput').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+
+// Focus sur l'input de commentaire
+function focusCommentInput() {
+    document.getElementById('commentInput').focus();
+}
+
+// Partager le highlight
+function shareHighlight() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'Highlight BLIZZ - {{ highlight.author.username }}',
+            text: '{{ highlight.caption|truncatewords:10 }}',
+            url: window.location.href
+        });
+    } else {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            alert('Lien copié dans le presse-papiers!');
+        });
+    }
+}
+
+// Animation CSS
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes heartBeat {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.2); }
+        50% { transform: scale(1); }
+        75% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

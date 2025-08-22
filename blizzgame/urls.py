@@ -98,4 +98,33 @@ urlpatterns = [
     path('webhooks/shopify/products/create/', webhook_handlers.shopify_product_create_webhook, name='shopify_product_create_webhook'),
     path('webhooks/shopify/products/update/', webhook_handlers.shopify_product_update_webhook, name='shopify_product_update_webhook'),
     path('webhooks/shopify/products/delete/', webhook_handlers.shopify_product_delete_webhook, name='shopify_product_delete_webhook'),
+    
+    # === URLs HIGHLIGHTS ===
+    
+    # Pages principales Highlights
+    path('highlights/', views.highlights_home, name='highlights_home'),
+    path('highlights/for-you/', views.highlights_for_you, name='highlights_for_you'),
+    path('highlights/friends/', views.highlights_friends, name='highlights_friends'),
+    path('highlights/search/', views.highlights_search, name='highlights_search'),
+    path('highlights/hashtag/<str:hashtag>/', views.highlights_hashtag, name='highlights_hashtag'),
+    
+    # Gestion des Highlights
+    path('highlights/create/', views.create_highlight, name='create_highlight'),
+    path('highlights/<uuid:highlight_id>/', views.highlight_detail, name='highlight_detail'),
+    path('highlights/<uuid:highlight_id>/delete/', views.delete_highlight, name='delete_highlight'),
+    
+    # Actions sur les Highlights
+    path('highlights/<uuid:highlight_id>/like/', views.toggle_highlight_like, name='toggle_highlight_like'),
+    path('highlights/<uuid:highlight_id>/comment/', views.add_highlight_comment, name='add_highlight_comment'),
+    path('highlights/<uuid:highlight_id>/share/', views.share_highlight, name='share_highlight'),
+    path('highlights/<uuid:highlight_id>/view/', views.record_highlight_view, name='record_highlight_view'),
+    
+    # Système d'abonnement
+    path('subscribe/<int:user_id>/', views.toggle_subscription, name='toggle_subscription'),
+    path('subscriptions/', views.my_subscriptions, name='my_subscriptions'),
+    path('subscribers/', views.my_subscribers, name='my_subscribers'),
+    
+    # API pour les Highlights (AJAX)
+    path('api/highlights/feed/', views.highlights_feed_api, name='highlights_feed_api'),
+    path('api/highlights/<uuid:highlight_id>/comments/', views.highlight_comments_api, name='highlight_comments_api'),
 ]

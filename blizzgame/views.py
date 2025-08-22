@@ -17,10 +17,13 @@ import logging
 from .models import (
     Profile, Post, PostImage, PostVideo, Transaction, Chat, Message, Notification,
     Product, ProductCategory, Cart, CartItem, Order, OrderItem, ShopCinetPayTransaction,
-    ProductVariant, UserReputation, SellerPaymentInfo
+    ProductVariant, UserReputation, SellerPaymentInfo, Highlight, HighlightLike, 
+    HighlightComment, HighlightView, HighlightShare, UserSubscription
 )
 from .shopify_utils import create_shopify_order_from_blizz_order, sync_products_from_shopify
 from .cinetpay_utils import CinetPayAPI, handle_cinetpay_notification, convert_currency_for_cinetpay
+from django.db.models import Exists, OuterRef
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -558,3 +561,533 @@ def reset_payment_info(request):
     payment_info.delete()
     messages.success(request, 'Informations de paiement réinitialisées')
     return redirect('seller_payment_setup')
+
+# ===== HIGHLIGHTS SYSTEM =====
+
+def highlights_home(request):
+    """Page d'accueil des Highlights avec navigation"""
+    try:
+        # Récupérer quelques highlights récents pour l'aperçu
+        recent_highlights = Highlight.objects.filter(
+            is_active=True,
+            expires_at__gt=timezone.now()
+        ).select_related('author', 'author__profile').order_by('-created_at')[:10]
+        
+        # Statistiques pour l'utilisateur connecté
+        user_stats = {}
+        if request.user.is_authenticated:
+            user_stats = {
+                'highlights_count': Highlight.objects.filter(author=request.user, is_active=True).count(),
+                'subscribers_count': request.user.subscribers.count(),
+                'subscriptions_count': request.user.subscriptions.count(),
+            }
+        
+        context = {
+            'recent_highlights': recent_highlights,
+            'user_stats': user_stats,
+        }
+        return render(request, 'highlights/home.html', context)
+    except Exception as e:
+        logger.error(f"Erreur highlights_home: {e}")
+        messages.error(request, "Erreur lors du chargement des Highlights")
+        return redirect('index')
+
+def highlights_for_you(request):
+    """Feed personnalisé des Highlights"""
+    try:
+        highlights = Highlight.objects.filter(
+            is_active=True,
+            expires_at__gt=timezone.now()
+        ).select_related('author', 'author__profile').prefetch_related(
+            'likes', 'comments', 'views'
+        ).order_by('-created_at')
+        
+        # Si l'utilisateur est connecté, prioriser les highlights des abonnements
+        if request.user.is_authenticated:
+            subscribed_users = request.user.subscriptions.values_list('subscribed_to', flat=True)
+            highlights = highlights.annotate(
+                is_from_subscription=Exists(
+                    UserSubscription.objects.filter(
+                        subscriber=request.user,
+                        subscribed_to=OuterRef('author')
+                    )
+                )
+            ).order_by('-is_from_subscription', '-created_at')
+        
+        paginator = Paginator(highlights, 20)
+        page_number = request.GET.get('page')
+        highlights = paginator.get_page(page_number)
+        
+        context = {
+            'highlights': highlights,
+            'page_title': 'Pour Toi',
+        }
+        return render(request, 'highlights/feed.html', context)
+    except Exception as e:
+        logger.error(f"Erreur highlights_for_you: {e}")
+        messages.error(request, "Erreur lors du chargement du feed")
+        return redirect('highlights_home')
+
+@login_required
+def highlights_friends(request):
+    """Highlights des amis/abonnements uniquement"""
+    try:
+        subscribed_users = request.user.subscriptions.values_list('subscribed_to', flat=True)
+        
+        highlights = Highlight.objects.filter(
+            author__in=subscribed_users,
+            is_active=True,
+            expires_at__gt=timezone.now()
+        ).select_related('author', 'author__profile').prefetch_related(
+            'likes', 'comments', 'views'
+        ).order_by('-created_at')
+        
+        paginator = Paginator(highlights, 20)
+        page_number = request.GET.get('page')
+        highlights = paginator.get_page(page_number)
+        
+        context = {
+            'highlights': highlights,
+            'page_title': 'Amis',
+        }
+        return render(request, 'highlights/feed.html', context)
+    except Exception as e:
+        logger.error(f"Erreur highlights_friends: {e}")
+        messages.error(request, "Erreur lors du chargement des highlights d'amis")
+        return redirect('highlights_home')
+
+def highlights_search(request):
+    """Recherche de Highlights par hashtags ou utilisateurs"""
+    try:
+        query = request.GET.get('q', '').strip()
+        highlights = Highlight.objects.filter(
+            is_active=True,
+            expires_at__gt=timezone.now()
+        ).select_related('author', 'author__profile')
+        
+        if query:
+            if query.startswith('#'):
+                # Recherche par hashtag
+                hashtag = query[1:].lower()
+                highlights = highlights.filter(hashtags__icontains=hashtag)
+            else:
+                # Recherche par utilisateur ou caption
+                highlights = highlights.filter(
+                    Q(author__username__icontains=query) |
+                    Q(caption__icontains=query)
+                )
+        
+        paginator = Paginator(highlights, 20)
+        page_number = request.GET.get('page')
+        highlights = paginator.get_page(page_number)
+        
+        # Hashtags populaires
+        popular_hashtags = []
+        try:
+            all_hashtags = []
+            for h in Highlight.objects.filter(is_active=True, expires_at__gt=timezone.now()).values_list('hashtags', flat=True):
+                if h:
+                    all_hashtags.extend(h)
+            
+            from collections import Counter
+            hashtag_counts = Counter(all_hashtags)
+            popular_hashtags = [tag for tag, count in hashtag_counts.most_common(10)]
+        except Exception:
+            pass
+        
+        context = {
+            'highlights': highlights,
+            'query': query,
+            'popular_hashtags': popular_hashtags,
+            'page_title': 'Recherche',
+        }
+        return render(request, 'highlights/search.html', context)
+    except Exception as e:
+        logger.error(f"Erreur highlights_search: {e}")
+        messages.error(request, "Erreur lors de la recherche")
+        return redirect('highlights_home')
+
+def highlights_hashtag(request, hashtag):
+    """Highlights pour un hashtag spécifique"""
+    try:
+        highlights = Highlight.objects.filter(
+            hashtags__icontains=hashtag.lower(),
+            is_active=True,
+            expires_at__gt=timezone.now()
+        ).select_related('author', 'author__profile').order_by('-created_at')
+        
+        paginator = Paginator(highlights, 20)
+        page_number = request.GET.get('page')
+        highlights = paginator.get_page(page_number)
+        
+        context = {
+            'highlights': highlights,
+            'hashtag': hashtag,
+            'page_title': f'#{hashtag}',
+        }
+        return render(request, 'highlights/hashtag.html', context)
+    except Exception as e:
+        logger.error(f"Erreur highlights_hashtag: {e}")
+        messages.error(request, "Erreur lors du chargement du hashtag")
+        return redirect('highlights_search')
+
+@login_required
+def create_highlight(request):
+    """Créer un nouveau Highlight"""
+    try:
+        if request.method == 'POST':
+            video = request.FILES.get('video')
+            caption = request.POST.get('caption', '').strip()
+            
+            if not video:
+                messages.error(request, 'Veuillez sélectionner une vidéo')
+                return render(request, 'highlights/create.html')
+            
+            # Extraire les hashtags de la caption
+            hashtags = re.findall(r'#(\w+)', caption.lower())
+            
+            # Créer le highlight
+            highlight = Highlight.objects.create(
+                author=request.user,
+                video=video,
+                caption=caption,
+                hashtags=hashtags
+            )
+            
+            messages.success(request, 'Highlight créé avec succès!')
+            return redirect('highlight_detail', highlight_id=highlight.id)
+        
+        return render(request, 'highlights/create.html')
+    except Exception as e:
+        logger.error(f"Erreur create_highlight: {e}")
+        messages.error(request, "Erreur lors de la création du Highlight")
+        return redirect('highlights_home')
+
+def highlight_detail(request, highlight_id):
+    """Détail d'un Highlight avec commentaires"""
+    try:
+        highlight = get_object_or_404(
+            Highlight.objects.select_related('author', 'author__profile'),
+            id=highlight_id,
+            is_active=True
+        )
+        
+        # Vérifier si le highlight n'est pas expiré
+        if highlight.is_expired:
+            messages.warning(request, "Ce Highlight a expiré")
+            return redirect('highlights_home')
+        
+        # Enregistrer la vue
+        if request.user.is_authenticated:
+            HighlightView.objects.get_or_create(
+                highlight=highlight,
+                user=request.user,
+                defaults={'ip_address': request.META.get('REMOTE_ADDR')}
+            )
+        
+        # Récupérer les commentaires
+        comments = highlight.comments.select_related('user', 'user__profile').order_by('-created_at')
+        
+        # Vérifier si l'utilisateur a liké
+        user_liked = False
+        if request.user.is_authenticated:
+            user_liked = highlight.likes.filter(user=request.user).exists()
+        
+        context = {
+            'highlight': highlight,
+            'comments': comments,
+            'user_liked': user_liked,
+        }
+        return render(request, 'highlights/detail.html', context)
+    except Exception as e:
+        logger.error(f"Erreur highlight_detail: {e}")
+        messages.error(request, "Highlight non trouvé")
+        return redirect('highlights_home')
+
+@login_required
+def delete_highlight(request, highlight_id):
+    """Supprimer un Highlight"""
+    try:
+        highlight = get_object_or_404(Highlight, id=highlight_id, author=request.user)
+        
+        if request.method == 'POST':
+            highlight.delete()
+            messages.success(request, 'Highlight supprimé avec succès')
+            return redirect('highlights_home')
+        
+        return render(request, 'highlights/confirm_delete.html', {'highlight': highlight})
+    except Exception as e:
+        logger.error(f"Erreur delete_highlight: {e}")
+        messages.error(request, "Erreur lors de la suppression")
+        return redirect('highlights_home')
+
+@login_required
+@require_POST
+def toggle_highlight_like(request, highlight_id):
+    """Liker/Unliker un Highlight"""
+    try:
+        highlight = get_object_or_404(Highlight, id=highlight_id, is_active=True)
+        
+        like, created = HighlightLike.objects.get_or_create(
+            highlight=highlight,
+            user=request.user
+        )
+        
+        if not created:
+            like.delete()
+            liked = False
+        else:
+            liked = True
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'liked': liked,
+                'likes_count': highlight.likes_count
+            })
+        
+        return redirect('highlight_detail', highlight_id=highlight.id)
+    except Exception as e:
+        logger.error(f"Erreur toggle_highlight_like: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@require_POST
+def add_highlight_comment(request, highlight_id):
+    """Ajouter un commentaire à un Highlight"""
+    try:
+        highlight = get_object_or_404(Highlight, id=highlight_id, is_active=True)
+        content = request.POST.get('content', '').strip()
+        
+        if not content:
+            return JsonResponse({'success': False, 'error': 'Commentaire vide'})
+        
+        comment = HighlightComment.objects.create(
+            highlight=highlight,
+            user=request.user,
+            content=content
+        )
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'comment': {
+                    'id': str(comment.id),
+                    'content': comment.content,
+                    'user': comment.user.username,
+                    'created_at': comment.created_at.strftime('%H:%M'),
+                    'user_avatar': comment.user.profile.profileimg.url if hasattr(comment.user, 'profile') and comment.user.profile.profileimg else None
+                },
+                'comments_count': highlight.comments_count
+            })
+        
+        return redirect('highlight_detail', highlight_id=highlight.id)
+    except Exception as e:
+        logger.error(f"Erreur add_highlight_comment: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@require_POST
+def share_highlight(request, highlight_id):
+    """Partager un Highlight"""
+    try:
+        highlight = get_object_or_404(Highlight, id=highlight_id, is_active=True)
+        shared_to_id = request.POST.get('shared_to')
+        
+        shared_to = None
+        if shared_to_id:
+            shared_to = get_object_or_404(User, id=shared_to_id)
+        
+        share = HighlightShare.objects.create(
+            highlight=highlight,
+            user=request.user,
+            shared_to=shared_to
+        )
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Highlight partagé'})
+        
+        messages.success(request, 'Highlight partagé avec succès')
+        return redirect('highlight_detail', highlight_id=highlight.id)
+    except Exception as e:
+        logger.error(f"Erreur share_highlight: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_POST
+def record_highlight_view(request, highlight_id):
+    """Enregistrer une vue sur un Highlight"""
+    try:
+        highlight = get_object_or_404(Highlight, id=highlight_id, is_active=True)
+        
+        if request.user.is_authenticated:
+            view, created = HighlightView.objects.get_or_create(
+                highlight=highlight,
+                user=request.user,
+                defaults={'ip_address': request.META.get('REMOTE_ADDR')}
+            )
+        else:
+            # Pour les utilisateurs anonymes, utiliser l'IP
+            ip_address = request.META.get('REMOTE_ADDR')
+            if ip_address:
+                view, created = HighlightView.objects.get_or_create(
+                    highlight=highlight,
+                    ip_address=ip_address,
+                    user=None
+                )
+        
+        return JsonResponse({'success': True, 'views_count': highlight.views.count()})
+    except Exception as e:
+        logger.error(f"Erreur record_highlight_view: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@require_POST
+def toggle_subscription(request, user_id):
+    """S'abonner/Se désabonner d'un utilisateur"""
+    try:
+        target_user = get_object_or_404(User, id=user_id)
+        
+        if target_user == request.user:
+            return JsonResponse({'success': False, 'error': 'Impossible de s\'abonner à soi-même'})
+        
+        subscription, created = UserSubscription.objects.get_or_create(
+            subscriber=request.user,
+            subscribed_to=target_user
+        )
+        
+        if not created:
+            subscription.delete()
+            subscribed = False
+            action = 'désabonné'
+        else:
+            subscribed = True
+            action = 'abonné'
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'subscribed': subscribed,
+                'action': action,
+                'subscribers_count': target_user.subscribers.count()
+            })
+        
+        messages.success(request, f'Vous êtes maintenant {action} à {target_user.username}')
+        return redirect('profile', username=target_user.username)
+    except Exception as e:
+        logger.error(f"Erreur toggle_subscription: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+def my_subscriptions(request):
+    """Liste des abonnements de l'utilisateur"""
+    try:
+        subscriptions = UserSubscription.objects.filter(
+            subscriber=request.user
+        ).select_related('subscribed_to', 'subscribed_to__profile').order_by('-created_at')
+        
+        context = {
+            'subscriptions': subscriptions,
+        }
+        return render(request, 'highlights/subscriptions.html', context)
+    except Exception as e:
+        logger.error(f"Erreur my_subscriptions: {e}")
+        messages.error(request, "Erreur lors du chargement des abonnements")
+        return redirect('highlights_home')
+
+@login_required
+def my_subscribers(request):
+    """Liste des abonnés de l'utilisateur"""
+    try:
+        subscribers = UserSubscription.objects.filter(
+            subscribed_to=request.user
+        ).select_related('subscriber', 'subscriber__profile').order_by('-created_at')
+        
+        context = {
+            'subscribers': subscribers,
+        }
+        return render(request, 'highlights/subscribers.html', context)
+    except Exception as e:
+        logger.error(f"Erreur my_subscribers: {e}")
+        messages.error(request, "Erreur lors du chargement des abonnés")
+        return redirect('highlights_home')
+
+# ===== API HIGHLIGHTS (AJAX) =====
+
+def highlights_feed_api(request):
+    """API pour le feed des Highlights (AJAX)"""
+    try:
+        page = int(request.GET.get('page', 1))
+        feed_type = request.GET.get('type', 'for_you')
+        
+        highlights = Highlight.objects.filter(
+            is_active=True,
+            expires_at__gt=timezone.now()
+        ).select_related('author', 'author__profile')
+        
+        if feed_type == 'friends' and request.user.is_authenticated:
+            subscribed_users = request.user.subscriptions.values_list('subscribed_to', flat=True)
+            highlights = highlights.filter(author__in=subscribed_users)
+        
+        highlights = highlights.order_by('-created_at')
+        
+        paginator = Paginator(highlights, 10)
+        highlights_page = paginator.get_page(page)
+        
+        highlights_data = []
+        for highlight in highlights_page:
+            user_liked = False
+            if request.user.is_authenticated:
+                user_liked = highlight.likes.filter(user=request.user).exists()
+            
+            highlights_data.append({
+                'id': str(highlight.id),
+                'video_url': highlight.video.url,
+                'caption': highlight.caption,
+                'hashtags': highlight.hashtags,
+                'author': {
+                    'username': highlight.author.username,
+                    'avatar': highlight.author.profile.profileimg.url if hasattr(highlight.author, 'profile') and highlight.author.profile.profileimg else None
+                },
+                'likes_count': highlight.likes_count,
+                'comments_count': highlight.comments_count,
+                'views_count': highlight.views.count(),
+                'user_liked': user_liked,
+                'created_at': highlight.created_at.strftime('%H:%M'),
+                'time_remaining': str(highlight.time_remaining) if highlight.time_remaining else None
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'highlights': highlights_data,
+            'has_next': highlights_page.has_next(),
+            'next_page': highlights_page.next_page_number() if highlights_page.has_next() else None
+        })
+    except Exception as e:
+        logger.error(f"Erreur highlights_feed_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def highlight_comments_api(request, highlight_id):
+    """API pour les commentaires d'un Highlight"""
+    try:
+        highlight = get_object_or_404(Highlight, id=highlight_id, is_active=True)
+        comments = highlight.comments.select_related('user', 'user__profile').order_by('-created_at')
+        
+        comments_data = []
+        for comment in comments:
+            comments_data.append({
+                'id': str(comment.id),
+                'content': comment.content,
+                'user': {
+                    'username': comment.user.username,
+                    'avatar': comment.user.profile.profileimg.url if hasattr(comment.user, 'profile') and comment.user.profile.profileimg else None
+                },
+                'created_at': comment.created_at.strftime('%H:%M')
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'comments': comments_data
+        })
+    except Exception as e:
+        logger.error(f"Erreur highlight_comments_api: {e}")
+        return JsonResponse({'success': False, 'error': str(e)})

@@ -5,6 +5,114 @@ from django.core.validators import MaxValueValidator
 from django.utils import timezone
 import json
 
+# Modèles Highlights
+class Highlight(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='highlights')
+    video = models.FileField(upload_to='highlights_videos/')
+    caption = models.TextField(max_length=500, blank=True)
+    hashtags = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    views_count = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timezone.timedelta(hours=48)
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    @property
+    def time_remaining(self):
+        if self.is_expired:
+            return None
+        return self.expires_at - timezone.now()
+    
+    @property
+    def likes_count(self):
+        return self.likes.count()
+    
+    @property
+    def comments_count(self):
+        return self.comments.count()
+    
+    def __str__(self):
+        return f"Highlight by {self.author.username} - {self.created_at}"
+
+class HighlightLike(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    highlight = models.ForeignKey(Highlight, on_delete=models.CASCADE, related_name='likes')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='highlight_likes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['highlight', 'user']
+    
+    def __str__(self):
+        return f"{self.user.username} likes {self.highlight.id}"
+
+class HighlightComment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    highlight = models.ForeignKey(Highlight, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='highlight_comments')
+    content = models.TextField(max_length=300)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"Comment by {self.user.username} on {self.highlight.id}"
+
+class HighlightView(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    highlight = models.ForeignKey(Highlight, on_delete=models.CASCADE, related_name='views')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='highlight_views', null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['highlight', 'user']
+    
+    def __str__(self):
+        return f"View on {self.highlight.id} by {self.user.username if self.user else 'Anonymous'}"
+
+class HighlightShare(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    highlight = models.ForeignKey(Highlight, on_delete=models.CASCADE, related_name='shares')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='highlight_shares')
+    shared_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_highlight_shares', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} shared {self.highlight.id}"
+
+class UserSubscription(models.Model):
+    """Système d'abonnement pour les Highlights (remplace les demandes d'amis)"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    subscriber = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    subscribed_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscribers')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['subscriber', 'subscribed_to']
+        constraints = [
+            models.CheckConstraint(
+                check=~models.Q(subscriber=models.F('subscribed_to')),
+                name='no_self_subscription'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.subscriber.username} subscribed to {self.subscribed_to.username}"
+
 # Modèles existants
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -14,6 +122,23 @@ class Profile(models.Model):
     location = models.CharField(max_length=100, blank=True)
     banner = models.ImageField(upload_to='banner_images', default='default_banner.png', blank=True, null=True)
     favorite_games = models.JSONField(default=list, blank=True, help_text="Liste des jeux favoris de l'utilisateur")
+
+    @property
+    def friends_count(self):
+        """Compte le nombre d'amis (abonnements mutuels)"""
+        user_subscriptions = set(self.user.subscriptions.values_list('subscribed_to_id', flat=True))
+        user_subscribers = set(self.user.subscribers.values_list('subscriber_id', flat=True))
+        return len(user_subscriptions.intersection(user_subscribers))
+    
+    @property
+    def subscribers_count(self):
+        """Compte le nombre d'abonnés"""
+        return self.user.subscribers.count()
+    
+    @property
+    def subscriptions_count(self):
+        """Compte le nombre d'abonnements"""
+        return self.user.subscriptions.count()
 
     GAME_CHOICES = [
         ('FreeFire', 'FreeFire'),

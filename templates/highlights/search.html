@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Recherche Highlights - BLIZZ{% endblock %}
+
+{% block content %}
+<style>
+    .search-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+        min-height: 100vh;
+    }
+
+    .search-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .search-title {
+        font-family: 'Halo', sans-serif;
+        color: var(--primary-color);
+        font-size: 2.5rem;
+        text-shadow: 0 0 15px var(--primary-color);
+        margin-bottom: 1rem;
+    }
+
+    .search-form {
+        max-width: 600px;
+        margin: 0 auto 3rem;
+        position: relative;
+    }
+
+    .search-input-group {
+        display: flex;
+        gap: 1rem;
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        border-radius: 25px;
+        padding: 0.5rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .search-input {
+        flex: 1;
+        background: none;
+        border: none;
+        color: white;
+        padding: 1rem;
+        font-size: 1rem;
+        outline: none;
+    }
+
+    .search-input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .search-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 1rem 1.5rem;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .search-btn:hover {
+        background: var(--secondary-color);
+        transform: scale(1.05);
+    }
+
+    .popular-hashtags {
+        margin-bottom: 3rem;
+    }
+
+    .hashtags-title {
+        font-family: 'RussoOne', sans-serif;
+        color: white;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+
+    .hashtags-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .popular-hashtag {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-weight: 600;
+    }
+
+    .popular-hashtag:hover {
+        background: var(--primary-color);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+    }
+
+    .search-results {
+        margin-top: 2rem;
+    }
+
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .results-count {
+        color: white;
+        font-size: 1.1rem;
+    }
+
+    .results-query {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .highlights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 2rem;
+    }
+
+    .highlight-result-card {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        border-radius: 15px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        aspect-ratio: 9/16;
+        position: relative;
+    }
+
+    .highlight-result-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0 20px var(--primary-color);
+    }
+
+    .result-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        cursor: pointer;
+    }
+
+    .result-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+        padding: 1rem;
+        color: white;
+    }
+
+    .result-author {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .result-author img {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        border: 1px solid var(--primary-color);
+    }
+
+    .result-caption {
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.9;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .result-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .empty-results {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .empty-results i {
+        font-size: 4rem;
+        color: var(--primary-color);
+        margin-bottom: 2rem;
+        opacity: 0.7;
+    }
+
+    .search-suggestions {
+        margin-top: 2rem;
+        text-align: center;
+    }
+
+    .suggestion-text {
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 1rem;
+    }
+
+    .suggestion-links {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .suggestion-link {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 15px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .suggestion-link:hover {
+        background: var(--primary-color);
+        color: white;
+        text-decoration: none;
+    }
+
+    @media (max-width: 768px) {
+        .search-container {
+            padding: 1rem;
+        }
+        
+        .search-title {
+            font-size: 2rem;
+        }
+        
+        .search-input-group {
+            flex-direction: column;
+        }
+        
+        .highlights-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        }
+        
+        .hashtags-grid {
+            justify-content: flex-start;
+        }
+    }
+</style>
+
+<div class="search-container">
+    <div class="search-header">
+        <h1 class="search-title">
+            <i class="fas fa-search"></i>
+            Recherche Highlights
+        </h1>
+    </div>
+
+    <!-- Formulaire de recherche -->
+    <form method="GET" class="search-form">
+        <div class="search-input-group">
+            <input type="text" name="q" class="search-input" 
+                   placeholder="Rechercher par utilisateur, hashtag (#gaming) ou description..."
+                   value="{{ query }}" autofocus>
+            <button type="submit" class="search-btn">
+                <i class="fas fa-search"></i>
+                Rechercher
+            </button>
+        </div>
+    </form>
+
+    <!-- Hashtags populaires -->
+    {% if popular_hashtags %}
+    <div class="popular-hashtags">
+        <h2 class="hashtags-title">🔥 Hashtags Populaires</h2>
+        <div class="hashtags-grid">
+            {% for hashtag in popular_hashtags %}
+            <a href="{% url 'highlights_hashtag' hashtag %}" class="popular-hashtag">
+                #{{ hashtag }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Résultats de recherche -->
+    {% if query %}
+    <div class="search-results">
+        <div class="results-header">
+            <div class="results-count">
+                {% if highlights %}
+                    {{ highlights.paginator.count }} résultat{{ highlights.paginator.count|pluralize }} pour 
+                    <span class="results-query">"{{ query }}"</span>
+                {% else %}
+                    Aucun résultat pour <span class="results-query">"{{ query }}"</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if highlights %}
+        <div class="highlights-grid">
+            {% for highlight in highlights %}
+            <div class="highlight-result-card" onclick="window.location.href='{% url 'highlight_detail' highlight.id %}'">
+                <video class="result-video" muted preload="metadata">
+                    <source src="{{ highlight.video.url }}" type="video/mp4">
+                </video>
+                
+                <div class="result-overlay">
+                    <div class="result-author">
+                        {% if highlight.author.profile.profileimg %}
+                        <img src="{{ highlight.author.profile.profileimg.url }}" alt="{{ highlight.author.username }}">
+                        {% endif %}
+                        @{{ highlight.author.username }}
+                    </div>
+                    
+                    {% if highlight.caption %}
+                    <div class="result-caption">{{ highlight.caption }}</div>
+                    {% endif %}
+                    
+                    <div class="result-stats">
+                        <span><i class="fas fa-heart"></i> {{ highlight.likes_count }}</span>
+                        <span><i class="fas fa-comment"></i> {{ highlight.comments_count }}</span>
+                        <span><i class="fas fa-eye"></i> {{ highlight.views.count }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if highlights.has_other_pages %}
+        <div class="pagination-container" style="text-align: center; margin-top: 3rem;">
+            {% if highlights.has_previous %}
+            <a href="?q={{ query }}&page={{ highlights.previous_page_number }}" class="popular-hashtag">
+                <i class="fas fa-chevron-left"></i> Précédent
+            </a>
+            {% endif %}
+            
+            {% if highlights.has_next %}
+            <a href="?q={{ query }}&page={{ highlights.next_page_number }}" class="popular-hashtag">
+                Suivant <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-results">
+            <i class="fas fa-search"></i>
+            <h3>Aucun résultat trouvé</h3>
+            <p>Essayez avec d'autres mots-clés ou hashtags</p>
+            
+            <div class="search-suggestions">
+                <div class="suggestion-text">Suggestions de recherche :</div>
+                <div class="suggestion-links">
+                    <a href="?q=%23gaming" class="suggestion-link">#gaming</a>
+                    <a href="?q=%23freefire" class="suggestion-link">#freefire</a>
+                    <a href="?q=%23pubg" class="suggestion-link">#pubg</a>
+                    <a href="?q=%23win" class="suggestion-link">#win</a>
+                    <a href="?q=%23epic" class="suggestion-link">#epic</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Prévisualisation vidéo au survol
+document.addEventListener('DOMContentLoaded', function() {
+    const videoElements = document.querySelectorAll('.result-video');
+    
+    videoElements.forEach(video => {
+        video.addEventListener('mouseenter', function() {
+            this.play();
+        });
+        
+        video.addEventListener('mouseleave', function() {
+            this.pause();
+            this.currentTime = 0;
+        });
+    });
+});
+
+// Recherche en temps réel (optionnel)
+let searchTimeout;
+document.querySelector('.search-input').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    
+    if (query.length > 2) {
+        searchTimeout = setTimeout(() => {
+            // Optionnel: recherche AJAX en temps réel
+            console.log('Recherche:', query);
+        }, 500);
+    }
+});
+</script>
+{% endblock %}

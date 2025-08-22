@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Créer un Highlight - BLIZZ{% endblock %}
+
+{% block content %}
+<style>
+    .create-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+        min-height: 100vh;
+    }
+
+    .create-card {
+        background: linear-gradient(145deg, rgba(15, 23, 41, 0.9), rgba(108, 92, 231, 0.1));
+        border: 1px solid var(--primary-color);
+        border-radius: 20px;
+        padding: 2rem;
+        backdrop-filter: blur(10px);
+    }
+
+    .create-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .create-title {
+        font-family: 'Halo', sans-serif;
+        color: var(--primary-color);
+        font-size: 2.5rem;
+        text-shadow: 0 0 15px var(--primary-color);
+        margin-bottom: 1rem;
+    }
+
+    .create-subtitle {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 1rem;
+    }
+
+    .upload-section {
+        margin-bottom: 2rem;
+    }
+
+    .video-upload-zone {
+        border: 2px dashed var(--primary-color);
+        border-radius: 15px;
+        padding: 3rem 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        background: rgba(108, 92, 231, 0.05);
+    }
+
+    .video-upload-zone:hover {
+        border-color: var(--secondary-color);
+        background: rgba(108, 92, 231, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .video-upload-zone.dragover {
+        border-color: #ff6b6b;
+        background: rgba(255, 107, 107, 0.1);
+    }
+
+    .upload-icon {
+        font-size: 3rem;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+    }
+
+    .upload-text {
+        color: white;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-requirements {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+
+    .video-input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .video-preview {
+        display: none;
+        margin-top: 1rem;
+        border-radius: 15px;
+        overflow: hidden;
+        border: 1px solid var(--primary-color);
+    }
+
+    .preview-video {
+        width: 100%;
+        max-height: 400px;
+        object-fit: cover;
+    }
+
+    .video-info {
+        background: rgba(0, 0, 0, 0.5);
+        padding: 1rem;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .remove-video {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .remove-video:hover {
+        background: #c0392b;
+        transform: scale(1.05);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        color: white;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--primary-color);
+        border-radius: 10px;
+        color: white;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        resize: vertical;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 15px rgba(162, 155, 254, 0.3);
+    }
+
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .hashtag-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .hashtag-suggestion {
+        background: rgba(108, 92, 231, 0.2);
+        color: var(--primary-color);
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+
+    .hashtag-suggestion:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .character-count {
+        text-align: right;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+
+    .character-count.warning {
+        color: #ff9800;
+    }
+
+    .character-count.error {
+        color: #f44336;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .btn-create {
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 25px;
+        font-family: 'RussoOne', sans-serif;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-create:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 30px var(--primary-color);
+    }
+
+    .btn-create:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-cancel {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 1rem 2rem;
+        border-radius: 25px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        .create-container {
+            padding: 1rem;
+        }
+        
+        .create-card {
+            padding: 1.5rem;
+        }
+        
+        .create-title {
+            font-size: 2rem;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<div class="create-container">
+    <div class="create-card">
+        <div class="create-header">
+            <h1 class="create-title">
+                <i class="fas fa-video"></i>
+                Créer un Highlight
+            </h1>
+            <p class="create-subtitle">
+                Partagez vos meilleurs moments gaming en 30 secondes
+            </p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" id="createForm">
+            {% csrf_token %}
+            
+            <!-- Upload vidéo -->
+            <div class="upload-section">
+                <div class="video-upload-zone" id="uploadZone">
+                    <input type="file" name="video" id="videoInput" class="video-input" 
+                           accept="video/*" required>
+                    <div class="upload-content">
+                        <div class="upload-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <div class="upload-text">Glissez votre vidéo ici ou cliquez pour sélectionner</div>
+                        <div class="upload-requirements">
+                            • Durée maximum: 30 secondes<br>
+                            • Formats: MP4, MOV, AVI<br>
+                            • Taille max: 50MB<br>
+                            • Orientation: Portrait recommandée
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="video-preview" id="videoPreview">
+                    <video class="preview-video" id="previewVideo" controls></video>
+                    <div class="video-info">
+                        <span id="videoDetails"></span>
+                        <button type="button" class="remove-video" onclick="removeVideo()">
+                            <i class="fas fa-trash"></i> Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Caption et hashtags -->
+            <div class="form-group">
+                <label for="caption">
+                    <i class="fas fa-edit"></i>
+                    Description (optionnel)
+                </label>
+                <textarea name="caption" id="caption" class="form-control" rows="4" 
+                          placeholder="Décrivez votre moment gaming... Utilisez # pour ajouter des hashtags"
+                          maxlength="500"></textarea>
+                <div class="character-count" id="charCount">0/500</div>
+                
+                <!-- Suggestions de hashtags -->
+                <div class="hashtag-suggestions">
+                    <span class="hashtag-suggestion" onclick="addHashtag('gaming')">#gaming</span>
+                    <span class="hashtag-suggestion" onclick="addHashtag('freefire')">#freefire</span>
+                    <span class="hashtag-suggestion" onclick="addHashtag('pubg')">#pubg</span>
+                    <span class="hashtag-suggestion" onclick="addHashtag('cod')">#cod</span>
+                    <span class="hashtag-suggestion" onclick="addHashtag('win')">#win</span>
+                    <span class="hashtag-suggestion" onclick="addHashtag('epic')">#epic</span>
+                    <span class="hashtag-suggestion" onclick="addHashtag('clutch')">#clutch</span>
+                    <span class="hashtag-suggestion" onclick="addHashtag('headshot')">#headshot</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <button type="submit" class="btn-create" id="createBtn">
+                    <i class="fas fa-video"></i>
+                    Publier le Highlight
+                </button>
+                <a href="{% url 'highlights_home' %}" class="btn-cancel">
+                    <i class="fas fa-times"></i>
+                    Annuler
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const videoInput = document.getElementById('videoInput');
+    const videoPreview = document.getElementById('videoPreview');
+    const previewVideo = document.getElementById('previewVideo');
+    const captionInput = document.getElementById('caption');
+    const charCount = document.getElementById('charCount');
+    const createBtn = document.getElementById('createBtn');
+    
+    // Drag & Drop
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            videoInput.files = files;
+            handleVideoUpload(files[0]);
+        }
+    });
+    
+    // Upload vidéo
+    videoInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            handleVideoUpload(file);
+        }
+    });
+    
+    function handleVideoUpload(file) {
+        // Vérifications
+        if (!file.type.startsWith('video/')) {
+            alert('Veuillez sélectionner un fichier vidéo valide');
+            return;
+        }
+        
+        if (file.size > 50 * 1024 * 1024) { // 50MB
+            alert('La vidéo est trop volumineuse (max 50MB)');
+            return;
+        }
+        
+        // Créer l'URL de prévisualisation
+        const videoURL = URL.createObjectURL(file);
+        previewVideo.src = videoURL;
+        
+        // Afficher la prévisualisation
+        uploadZone.style.display = 'none';
+        videoPreview.style.display = 'block';
+        
+        // Vérifier la durée quand la vidéo est chargée
+        previewVideo.addEventListener('loadedmetadata', function() {
+            const duration = Math.round(this.duration);
+            const size = (file.size / (1024 * 1024)).toFixed(1);
+            
+            document.getElementById('videoDetails').textContent = 
+                `Durée: ${duration}s • Taille: ${size}MB`;
+            
+            if (duration > 30) {
+                alert('⚠️ Attention: La vidéo dépasse 30 secondes. Elle sera automatiquement coupée.');
+            }
+        });
+    }
+    
+    // Compteur de caractères
+    captionInput.addEventListener('input', function() {
+        const count = this.value.length;
+        charCount.textContent = `${count}/500`;
+        
+        if (count > 450) {
+            charCount.className = 'character-count error';
+        } else if (count > 400) {
+            charCount.className = 'character-count warning';
+        } else {
+            charCount.className = 'character-count';
+        }
+    });
+    
+    // Validation du formulaire
+    document.getElementById('createForm').addEventListener('submit', function(e) {
+        const videoFile = videoInput.files[0];
+        
+        if (!videoFile) {
+            e.preventDefault();
+            alert('Veuillez sélectionner une vidéo');
+            return;
+        }
+        
+        // Désactiver le bouton pour éviter les doubles soumissions
+        createBtn.disabled = true;
+        createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publication...';
+    });
+});
+
+function removeVideo() {
+    document.getElementById('videoInput').value = '';
+    document.getElementById('videoPreview').style.display = 'none';
+    document.getElementById('uploadZone').style.display = 'block';
+    
+    // Libérer l'URL de l'objet
+    const previewVideo = document.getElementById('previewVideo');
+    if (previewVideo.src) {
+        URL.revokeObjectURL(previewVideo.src);
+        previewVideo.src = '';
+    }
+}
+
+function addHashtag(hashtag) {
+    const captionInput = document.getElementById('caption');
+    const currentValue = captionInput.value;
+    
+    // Vérifier si le hashtag n'est pas déjà présent
+    if (!currentValue.includes(`#${hashtag}`)) {
+        const newValue = currentValue + (currentValue ? ' ' : '') + `#${hashtag}`;
+        if (newValue.length <= 500) {
+            captionInput.value = newValue;
+            captionInput.dispatchEvent(new Event('input'));
+        }
+    }
+    
+    captionInput.focus();
+}
+</script>
+{% endblock %}
